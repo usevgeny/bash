@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# source of references https://github.com/openrewrite/rewrite-migrate-java/blob/main/src/main/resources/META-INF/rewrite/jakarta-ee-9.yml
 SRC_DIR=src/main/java
 
 # Map of javax → jakarta replacements
