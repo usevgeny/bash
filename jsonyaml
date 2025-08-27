@@ -1,0 +1,88 @@
+import json
+import yaml
+import argparse
+import sys
+
+# Key mappings for queues
+QUEUE_KEY_MAPPINGS = {
+    "EXP": "expires",
+    "PRI": "priority",
+    "cp": "codePage",
+    "PER": "deliveryMode",
+    "TC": "tc"
+}
+
+# Key mappings for connection factories (QCF)
+CF_KEY_MAPPINGS = {
+    "TRAN": "transport",
+    "QMGR": "queueManager",
+    "HOST": "host",
+    "CHAN": "channel",
+    "PORT": "port",
+    "cp": "codePage"
+}
+
+
+def parse_refaddr(ref_list, mapping):
+  
+    result = {}
+    for ref in ref_list:
+        key = mapping.get(ref.get("type"), ref.get("type"))
+        result[key] = ref.get("content")
+    return result
+
+
+def transform(data):
+
+    structure = {
+        "com": {
+            "myapp": {
+                "soa": {
+                    "cf": {
+                        "connectionFactory": {},
+                        "queue": {}
+                    }
+                }
+            }
+        }
+    }
+
+    for obj in data:
+        obj_type = obj.get("type")
+        name = obj.get("name")
+        refAddr = obj.get("refAddr", [])
+
+        if obj_type == "queue":
+            structure["com"]["myapp"]["soa"]["cf"]["queue"][name] = parse_refaddr(refAddr, QUEUE_KEY_MAPPINGS)
+
+        elif obj_type == "QCF":
+            structure["com"]["myapp"]["soa"]["cf"]["connectionFactory"][name] = parse_refaddr(refAddr, CF_KEY_MAPPINGS)
+
+    return structure
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Transform JSON to custom YAML")
+    parser.add_argument("input", help="Path to input JSON file")
+    args = parser.parse_args()
+
+    try:
+        with open(args.input, "r") as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Error reading {args.input}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    transformed = transform(data)
+
+    try:
+        with open("output.yaml", "w") as f:
+            yaml.dump(transformed, f, default_flow_style=False, sort_keys=False)
+        print("Successfully wrote output.yaml")
+    except Exception as e:
+        print(f"Error writing output.yaml: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
